@@ -1,0 +1,13 @@
+# Node
+node_modules/
+
+# Secrets
+.env
+
+# WhatsApp session/cache (no subir)
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Runtime logs
+sent_log.json
+*.log
