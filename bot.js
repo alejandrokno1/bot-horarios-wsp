@@ -1,9 +1,9 @@
 // bot.js
-// Bot WhatsApp: envía recordatorios 5 minutos antes según schedule.json
+// Bot WhatsApp: envía recordatorios LEAD_MINUTES antes según schedule.json
 // Requisitos: npm i whatsapp-web.js qrcode-terminal node-cron dotenv
 //
 // Archivos:
-// - .env (GROUP_IDS, TZ, LEAD_MINUTES, HEADLESS)
+// - .env (GROUP_IDS, TZ, LEAD_MINUTES, HEADLESS, PUPPETEER_EXECUTABLE_PATH opcional)
 // - schedule.json
 // - sent_log.json (se crea solo)
 //
@@ -23,7 +23,6 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const TZ = process.env.TZ || "America/Bogota";
 const LEAD_MINUTES = Number.parseInt(process.env.LEAD_MINUTES || "5", 10);
 
-// HEADLESS=true/false (por defecto true)
 const HEADLESS =
   (process.env.HEADLESS || "true").toLowerCase().trim() === "true";
 
@@ -33,14 +32,13 @@ const groupIds = (process.env.GROUP_IDS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-if (!groupIds.length) {
-  console.log("❌ Falta GROUP_IDS en .env (IDs separados por coma).");
-  process.exit(1);
-}
-
 if (!Number.isFinite(LEAD_MINUTES) || LEAD_MINUTES < 1 || LEAD_MINUTES > 60) {
   console.log("❌ LEAD_MINUTES inválido. Usa un número entre 1 y 60.");
   process.exit(1);
+}
+
+if (!groupIds.length) {
+  console.log("⚠️ GROUP_IDS está vacío. El bot iniciará, pero NO enviará a grupos hasta configurarlo.");
 }
 
 // =====================
@@ -55,14 +53,13 @@ const sentLogPath = path.join(__dirname, "sent_log.json");
 function loadSchedule() {
   if (!fs.existsSync(schedulePath)) {
     console.log("❌ No existe schedule.json en la carpeta del bot.");
-    process.exit(1);
+    return [];
   }
   const raw = fs.readFileSync(schedulePath, "utf-8");
   const data = JSON.parse(raw);
-
   if (!Array.isArray(data)) {
     console.log("❌ schedule.json debe ser un arreglo de eventos.");
-    process.exit(1);
+    return [];
   }
   return data;
 }
@@ -81,11 +78,9 @@ function saveSentLog(log) {
 }
 
 // =====================
-// Tiempo en TZ (America/Bogota)
+// Tiempo en TZ real
 // =====================
-
-// Obtiene { date:"YYYY-MM-DD", time:"HH:mm", hour, minute } en TZ
-function nowInTZ() {
+function partsInTZ(date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: TZ,
     year: "numeric",
@@ -94,44 +89,26 @@ function nowInTZ() {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).formatToParts(new Date());
+  }).formatToParts(date);
 
   const get = (type) => parts.find((p) => p.type === type)?.value;
-
-  const hour = Number.parseInt(get("hour"), 10);
-  const minute = Number.parseInt(get("minute"), 10);
 
   return {
     date: `${get("year")}-${get("month")}-${get("day")}`,
     time: `${get("hour")}:${get("minute")}`,
-    hour,
-    minute,
+    hour: Number.parseInt(get("hour"), 10),
+    minute: Number.parseInt(get("minute"), 10),
   };
 }
 
-// Suma minutos a un date+time *interpretado en Bogota*.
-// Como Bogota no usa DST, podemos usar un offset fijo -05:00.
-function addMinutesBogota(dateStr, timeStr, deltaMinutes) {
-  const iso = `${dateStr}T${timeStr}:00-05:00`; // Bogota offset
-  const dt = new Date(iso);
-  const out = new Date(dt.getTime() + deltaMinutes * 60_000);
+function nowInTZ() {
+  return partsInTZ(new Date());
+}
 
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(out);
-
-  const get = (type) => parts.find((p) => p.type === type)?.value;
-
-  return {
-    date: `${get("year")}-${get("month")}-${get("day")}`,
-    time: `${get("hour")}:${get("minute")}`,
-  };
+// Suma minutos usando reloj real y vuelve a formatear en TZ
+function addMinutesInTZ(deltaMinutes) {
+  const out = new Date(Date.now() + deltaMinutes * 60_000);
+  return partsInTZ(out);
 }
 
 // =====================
@@ -157,8 +134,24 @@ function buildMessage(event) {
 💡 Cada minuto de estudio hoy es un paso más hacia tu objetivo.
 ¡Conéctate y sigue avanzando! 💪📚
 🔗 Enlace de la clase:
- https://asesoriasacademicasnaslybeltran.q10.com/ `;
+https://asesoriasacademicasnaslybeltran.q10.com/`;
 }
+
+// =====================
+// Puppeteer args (server-safe)
+// =====================
+const puppeteerArgs = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--no-first-run",
+  "--no-zygote",
+  "--disable-features=site-per-process",
+];
+
+// Si Railway/Docker define una ruta de Chrome
+const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
 // =====================
 // WhatsApp Client
@@ -167,14 +160,34 @@ const client = new Client({
   authStrategy: new LocalAuth(), // guarda sesión local
   puppeteer: {
     headless: HEADLESS,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    args: puppeteerArgs,
+    ...(executablePath ? { executablePath } : {}),
   },
 });
 
-client.on("qr", (qr) => {
-  console.log("📲 Escanea el QR en WhatsApp -> Dispositivos vinculados:");
-  qrcode.generate(qr, { small: true });
+// =====================
+// Eventos
+// =====================
+
+
+const QRCode = require("qrcode");
+
+client.on("qr", async (qr) => {
+  console.log("📲 QR recibido. Abre este link y escanéalo con WhatsApp:");
+
+  // Link que genera una imagen PNG del QR (data URL)
+  const dataUrl = await QRCode.toDataURL(qr);
+
+  // Railway lo imprime como texto, pero lo puedes copiar y pegar en el navegador
+  console.log(dataUrl);
+
+  console.log("\n✅ TIP: Copia TODO el texto que empieza por 'data:image/png;base64,'");
+  console.log("   pégalo en el navegador (barra de direcciones) y verás la imagen del QR.\n");
 });
+
+
+
+
 
 client.on("authenticated", () => {
   console.log("✅ Autenticado.");
@@ -194,7 +207,9 @@ client.on("ready", async () => {
   console.log(`👥 Grupos configurados: ${groupIds.length}`);
   console.log("⏱️ Revisando cada minuto...\n");
 
-  // Validación rápida: mostrar nombres de los grupos configurados (solo una vez)
+  if (!groupIds.length) return;
+
+  // Validación rápida: mostrar nombres de los grupos (una vez)
   try {
     for (const gid of groupIds) {
       const chat = await client.getChatById(gid);
@@ -203,7 +218,7 @@ client.on("ready", async () => {
     console.log("");
   } catch (e) {
     console.log("⚠️ No pude validar todos los grupos ahora mismo.");
-    console.log("   Si luego no envía a alguno, revisa que el ID termine en @g.us.\n");
+    console.log("   Revisa que el ID termine en @g.us.\n");
   }
 });
 
@@ -211,16 +226,18 @@ client.on("ready", async () => {
 // Tick cada minuto
 // =====================
 async function tick() {
-  const schedule = loadSchedule();
-  const sentLog = loadSentLog();
+  if (!groupIds.length) return;
 
+  const schedule = loadSchedule();
+  if (!schedule.length) return;
+
+  const sentLog = loadSentLog();
   const now = nowInTZ();
 
-  // Hora objetivo = ahora + LEAD_MINUTES
-  const target = addMinutesBogota(now.date, now.time, LEAD_MINUTES);
+  // Hora objetivo = ahora + LEAD_MINUTES (en reloj real, formateado en TZ)
+  const target = addMinutesInTZ(LEAD_MINUTES);
   const targetKeyBase = `${target.date} ${target.time}`;
 
-  // Eventos que empiezan exactamente en target
   const events = schedule.filter(
     (e) => e.date === target.date && e.start === target.time
   );
@@ -228,32 +245,25 @@ async function tick() {
   if (!events.length) return;
 
   for (const ev of events) {
-    // Clave única para no duplicar (fecha/hora + materia + profe)
     const uniqueKey = `${targetKeyBase}|${ev.subject}|${ev.teacher}`;
-
-    if (sentLog[uniqueKey]) {
-      // ya enviado
-      continue;
-    }
+    if (sentLog[uniqueKey]) continue;
 
     const msg = buildMessage(ev);
 
-    console.log(`🚀 Enviando aviso para: ${targetKeyBase} | ${ev.subject} | ${ev.teacher}`);
+    console.log(
+      `🚀 Enviando aviso: ${targetKeyBase} | ${ev.subject} | ${ev.teacher}`
+    );
 
-    // Enviar a todos los grupos
     for (const gid of groupIds) {
       try {
         const chat = await client.getChatById(gid);
         await chat.sendMessage(msg);
-
-        // Pausa corta entre grupos (evita rate-limit)
         await new Promise((r) => setTimeout(r, 1200));
       } catch (e) {
         console.log(`❌ Error enviando a ${gid}:`, e?.message || e);
       }
     }
 
-    // Marcar como enviado
     sentLog[uniqueKey] = {
       sentAt: `${now.date} ${now.time}`,
       targetAt: `${target.date} ${target.time}`,
@@ -278,6 +288,29 @@ cron.schedule(
   },
   { timezone: TZ }
 );
+
+// (Opcional) health ping cada 10 min para ver vida en logs
+cron.schedule(
+  "*/10 * * * *",
+  () => {
+    const now = nowInTZ();
+    console.log(`💚 Health: ${now.date} ${now.time} (${TZ})`);
+  },
+  { timezone: TZ }
+);
+
+// Shutdown limpio
+process.on("SIGINT", async () => {
+  console.log("🧹 Cerrando (SIGINT)...");
+  try { await client.destroy(); } catch {}
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("🧹 Cerrando (SIGTERM)...");
+  try { await client.destroy(); } catch {}
+  process.exit(0);
+});
 
 // Start
 client.initialize();
