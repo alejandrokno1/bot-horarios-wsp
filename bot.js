@@ -1,6 +1,6 @@
 // bot.js
 // Bot WhatsApp: envía recordatorios LEAD_MINUTES antes según schedule.json
-// Requisitos: npm i whatsapp-web.js qrcode-terminal node-cron dotenv
+// Requisitos: npm i whatsapp-web.js qrcode-terminal node-cron dotenv qrcode
 //
 // Archivos:
 // - .env (GROUP_IDS, TZ, LEAD_MINUTES, HEADLESS, PUPPETEER_EXECUTABLE_PATH opcional)
@@ -38,7 +38,9 @@ if (!Number.isFinite(LEAD_MINUTES) || LEAD_MINUTES < 1 || LEAD_MINUTES > 60) {
 }
 
 if (!groupIds.length) {
-  console.log("⚠️ GROUP_IDS está vacío. El bot iniciará, pero NO enviará a grupos hasta configurarlo.");
+  console.log(
+    "⚠️ GROUP_IDS está vacío. El bot iniciará, pero NO enviará a grupos hasta configurarlo."
+  );
 }
 
 // =====================
@@ -112,7 +114,7 @@ function addMinutesInTZ(deltaMinutes) {
 }
 
 // =====================
-// Mensaje bonito
+// Mensaje bonito (con fecha ligera + "En X min inicia la clase de")
 // =====================
 function greetingByHour(hour) {
   if (hour < 12) return "BUENOS DÍAS";
@@ -120,19 +122,49 @@ function greetingByHour(hour) {
   return "BUENAS NOCHES";
 }
 
+// Convierte "YYYY-MM-DD" a Date "segura" para formatear en TZ sin que se corra el día
+function safeDateFromYMD(ymd) {
+  const [y, m, d] = String(ymd).split("-").map((x) => Number.parseInt(x, 10));
+  // Usamos mediodía UTC para evitar que al aplicar TZ quede en el día anterior
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+}
+
+function capitalizeFirst(s) {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Ej: "Martes 3 de febrero"
+function prettyDateEs(ymd) {
+  const dt = safeDateFromYMD(ymd);
+
+  // weekday: long -> "martes", month: long -> "febrero"
+  // Algunas locales ponen coma (martes, 3 de febrero). La quitamos.
+  const raw = new Intl.DateTimeFormat("es-CO", {
+    timeZone: TZ,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(dt);
+
+  const cleaned = raw.replace(",", ""); // "martes 3 de febrero"
+  return capitalizeFirst(cleaned); // "Martes 3 de febrero"
+}
+
 function buildMessage(event) {
   const now = nowInTZ();
   const saludo = greetingByHour(now.hour);
+  const fechaBonita = prettyDateEs(event.date);
 
   return `🌟 *${saludo}, FUTUROS SUBINTENDENTES* 🌟
+📅 *${fechaBonita}*
 
-👮‍♂️ En breve estaremos en clase de:
-
+⏰ *En ${LEAD_MINUTES} min inicia la clase de:*
 📘 *${event.subject}*
-👨‍🏫 *Profesor:* ${event.teacher}
+👨‍🏫 *Profesor(a):* *${event.teacher}*
+🕒 *Hora:* *${event.start} (COL)*
 
-💡 Cada minuto de estudio hoy es un paso más hacia tu objetivo.
-¡Conéctate y sigue avanzando! 💪📚
+💪 *Constancia hoy, resultado mañana.*
 🔗 Enlace de la clase:
 https://asesoriasacademicasnaslybeltran.q10.com/`;
 }
@@ -168,8 +200,6 @@ const client = new Client({
 // =====================
 // Eventos
 // =====================
-
-
 const QRCode = require("qrcode");
 
 client.on("qr", async (qr) => {
@@ -184,10 +214,6 @@ client.on("qr", async (qr) => {
   console.log("\n✅ TIP: Copia TODO el texto que empieza por 'data:image/png;base64,'");
   console.log("   pégalo en el navegador (barra de direcciones) y verás la imagen del QR.\n");
 });
-
-
-
-
 
 client.on("authenticated", () => {
   console.log("✅ Autenticado.");
