@@ -1,31 +1,19 @@
 [
-  { "date": "2026-03-23", "start": "06:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
-  { "date": "2026-03-23", "start": "09:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
-  { "date": "2026-03-23", "start": "12:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
-  { "date": "2026-03-23", "start": "16:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
-  { "date": "2026-03-23", "start": "19:30", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
+  { "date": "2026-03-30", "start": "06:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
+  { "date": "2026-03-30", "start": "09:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
+  { "date": "2026-03-30", "start": "12:00", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
+  { "date": "2026-03-30", "start": "16:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
+  { "date": "2026-03-30", "start": "19:30", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
 
-  { "date": "2026-03-24", "start": "06:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
-  { "date": "2026-03-24", "start": "09:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
-  { "date": "2026-03-24", "start": "12:00", "subject": "Conocimiento Policia", "teacher": "Sandra Milena Guayarac Sanchez" },
-  { "date": "2026-03-24", "start": "16:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
-  { "date": "2026-03-24", "start": "19:30", "subject": "Conocimiento Policia", "teacher": "Sandra Milena Guayarac Sanchez" },
+  { "date": "2026-03-31", "start": "06:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
+  { "date": "2026-03-31", "start": "09:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
+  { "date": "2026-03-31", "start": "12:00", "subject": "Conocimiento Policia", "teacher": "Sandra Milena Guayarac Sanchez" },
+  { "date": "2026-03-31", "start": "16:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
+  { "date": "2026-03-31", "start": "19:30", "subject": "Conocimiento Policia", "teacher": "Sandra Milena Guayarac Sanchez" },
 
-  { "date": "2026-03-25", "start": "06:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
-  { "date": "2026-03-25", "start": "09:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
-  { "date": "2026-03-25", "start": "12:00", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
-  { "date": "2026-03-25", "start": "16:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
-  { "date": "2026-03-25", "start": "19:30", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
-
-  { "date": "2026-03-26", "start": "06:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
-  { "date": "2026-03-26", "start": "09:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
-  { "date": "2026-03-26", "start": "12:00", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
-  { "date": "2026-03-26", "start": "16:00", "subject": "Lectura Crítica", "teacher": "Jaime Juan Garcia" },
-  { "date": "2026-03-26", "start": "19:30", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
-
-  { "date": "2026-03-27", "start": "06:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
-  { "date": "2026-03-27", "start": "09:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
-  { "date": "2026-03-27", "start": "12:00", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" },
-  { "date": "2026-03-27", "start": "16:00", "subject": "Razonamiento Cuantitativo", "teacher": "Guillermo Alejandro Cano Rodriguez" },
-  { "date": "2026-03-27", "start": "19:30", "subject": "Conocimientos Policiales", "teacher": "Luis Eusebio Araque Gomez" }
+  { "date": "2026-04-01", "start": "06:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
+  { "date": "2026-04-01", "start": "09:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
+  { "date": "2026-04-01", "start": "12:00", "subject": "Conocimiento Policia", "teacher": "Sandra Milena Guayarac Sanchez" },
+  { "date": "2026-04-01", "start": "16:00", "subject": "Competencias Ciudadanas", "teacher": "Edgar Gomez Rodriguez" },
+  { "date": "2026-04-01", "start": "19:30", "subject": "Conocimiento Policia", "teacher": "Sandra Milena Guayarac Sanchez" }
 ]
